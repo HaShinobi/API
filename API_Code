@@ -1,0 +1,190 @@
+API codes
+import nextConnect from 'next-connect'
+import multer from 'multer'
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: './public/uploads',
+    filename: function (req, file, cb) {
+      cb(null, file.originalname)
+    }
+  })
+})
+
+const destination = nextConnect()
+destination.use(upload.array('theFiles'))
+
+destination.post((req, res) => {
+  res.status(200).json({
+    message: 'Files uploaded successfully'
+  })
+})
+
+export default destination
+
+
+
+
+
+
+Wildcard Path Matching:
+module.exports = {
+  async redirects() {
+    return [
+      {
+        source: '/blog/:slug*',
+        destination: '/news/:slug*', // Matched parameters can be used in the destination
+        permanent: true,
+      },
+    ]
+  },
+}
+Header, Cookie, and Query Matching
+module.exports = {
+  async redirects() {
+    return [
+      // if the header `x-redirect-me` is present,
+      // this redirect will be applied
+      {
+        source: '/:path((?!another-page$).*)',
+        has: [
+          {
+            type: 'header',
+            key: 'x-redirect-me',
+          },
+        ],
+        permanent: false,
+        destination: '/another-page',
+      },
+      // if the header `x-dont-redirect` is present,
+      // this redirect will NOT be applied
+      {
+        source: '/:path((?!another-page$).*)',
+        missing: [
+          {
+            type: 'header',
+            key: 'x-do-not-redirect',
+          },
+        ],
+        permanent: false,
+        destination: '/another-page',
+      },
+      // if the source, query, and cookie are matched,
+      // this redirect will be applied
+      {
+        source: '/specific/:path*',
+        has: [
+          {
+            type: 'query',
+            key: 'page',
+            // the page value will not be available in the
+            // destination since value is provided and doesn't
+            // use a named capture group e.g. (?<page>home)
+            value: 'home',
+          },
+          {
+            type: 'cookie',
+            key: 'authorized',
+            value: 'true',
+          },
+        ],
+        permanent: false,
+        destination: '/another/:path*',
+      },
+      // if the header `x-authorized` is present and
+      // contains a matching value, this redirect will be applied
+      {
+        source: '/',
+        has: [
+          {
+            type: 'header',
+            key: 'x-authorized',
+            value: '(?<authorized>yes|true)',
+          },
+        ],
+        permanent: false,
+        destination: '/home?authorized=:authorized',
+      },
+      // if the host is `example.com`,
+      // this redirect will be applied
+      {
+        source: '/:path((?!another-page$).*)',
+        has: [
+          {
+            type: 'host',
+            value: 'example.com',
+          },
+        ],
+        permanent: false,
+        destination: '/another-page',
+      },
+    ]
+  },
+}
+Redirects with basePath support:
+module.exports = {
+  basePath: '/docs',
+ 
+  async redirects() {
+    return [
+      {
+        source: '/with-basePath', // automatically becomes /docs/with-basePath
+        destination: '/another', // automatically becomes /docs/another
+        permanent: false,
+      },
+      {
+        // does not add /docs since basePath: false is set
+        source: '/without-basePath',
+        destination: 'https://example.com',
+        basePath: false,
+        permanent: false,
+      },
+    ]
+  },
+}
+Redirects with i18n support
+
+module.exports = {
+  i18n: {
+    locales: ['en', 'fr', 'de'],
+    defaultLocale: 'en',
+  },
+ 
+  async redirects() {
+    return [
+      {
+        source: '/with-locale', // automatically handles all locales
+        destination: '/another', // automatically passes the locale on
+        permanent: false,
+      },
+      {
+        // does not handle locales automatically since locale: false is set
+        source: '/nl/with-locale-manual',
+        destination: '/nl/another',
+        locale: false,
+        permanent: false,
+      },
+      {
+        // this matches '/' since `en` is the defaultLocale
+        source: '/en',
+        destination: '/en/another',
+        locale: false,
+        permanent: false,
+      },
+      // it's possible to match all locales even when locale: false is set
+      {
+        source: '/:locale/page',
+        destination: '/en/newpage',
+        permanent: false,
+        locale: false,
+      },
+      {
+        // this gets converted to /(en|fr|de)/(.*) so will not match the top-level
+        // `/` or `/fr` routes like /:path* would
+        source: '/(.*)',
+        destination: '/another',
+        permanent: false,
+      },
+    ]
+  },
+}
